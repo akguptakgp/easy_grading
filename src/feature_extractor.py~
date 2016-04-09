@@ -1,4 +1,3 @@
-# Copyright 2015 - Vatika Harlalka, Anurag Ghosh, Abhijeet Kumar
 import csv
 import nltk
 import string
@@ -182,7 +181,7 @@ class Point:
         '''
         self.numerical_features()
         self.pos_features()
-        # self.stylized_word_scores()
+        self.stylized_word_scores()
 
 def get_stem_tokens(tokens, stemmer):
     stemmed = []
@@ -229,13 +228,13 @@ def make_points():
             points = []
             print len(csv_rows)
             for row in csv_rows:
-                tokens = stem_tokenize(row[2].translate(None, string.punctuation).decode('utf-8'))
-                essay_tokens.append(tokens)
-                all_words.extend(tokens)
                 try:
                     p = Point(row[0], row[1], row[2], int(row[6]))
                 except:
                     continue
+                tokens = stem_tokenize(row[2].translate(None, string.punctuation).decode('utf-8'))
+                essay_tokens.append(tokens)
+                all_words.extend(tokens)
                 points.append(p)
             values = Bag_of_Words(essay_tokens, all_words)
             for i in xrange(len(points)):
