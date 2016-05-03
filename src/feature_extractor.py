@@ -2,15 +2,20 @@ import csv
 import nltk
 import string
 import json
+import cPickle
+
+import warnings
 
 from collections import Counter
-
-from nltk.corpus import stopwords
-from nltk.stem.porter import PorterStemmer
-
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.metrics.pairwise import linear_kernel
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore",category=DeprecationWarning)
+    from nltk.corpus import stopwords
+    from nltk.stem.porter import PorterStemmer
+    import sets
+    from sets import Set
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.feature_extraction.text import CountVectorizer
+    from sklearn.metrics.pairwise import linear_kernel
 
 import enchant
 
@@ -30,9 +35,9 @@ beauty_reference = {
     'y' : 2.11, 'z' : 0.07,
 }
 # http://www.ling.upenn.edu/courses/Fall_2003/ling001/penn_treebank_pos.html
-pos_classes = [ ["CC"],["DT"],["EX"],["IN"],["MD"],["TO"],["UH"],["PDT"],["POS"],["FW"],["CD"],["LS"],["RP"],["SYM"], \
-                ["JJ"],["JJR"],["JS"],["NN"],["NNS"],["NNP"],["NNPS"],["PRP"],["PRP$" ], \
-                ["RB"],["RBR"],["RBS" ],["VBD"],["VBG"],["VBN"],["VBP"],["VBZ"], ["WDT"],["WP"],["WP$"],["WRB"],
+pos_classes = [ ["CC"],["DT"],["IN"],["MD"],["TO"],["CD"],["RP"], \
+                ["JJ"],["JJR"],["NN"],["NNS"],["NNP"],["PRP"],["PRP$" ], \
+                ["RB"],["VBD"],["VBG"],["VBN"],["VBP"],["VBZ"], ["WDT"],["WP"],["WRB"],
               ]
 
 # http://crr.ugent.be/archives/806
@@ -47,6 +52,8 @@ class Point:
         self.essay_set = essay_set
         self.essay_str = essay_str
         self.score = score
+        self.uniq=Set()
+        self.sz=0
         self.features = []
         self.all_features()
         self.bag_of_words = 0
@@ -59,14 +66,15 @@ class Point:
         return all the features along with the idendity of the essay (essay set , essay id etc)
         '''
         feature_str = ','.join(str(x) for x in self.features)
-        return ','.join([self.essay_id, self.essay_set, str(self.score), feature_str, str(self.bag_of_words)]) + '\n'
-
+        return ','.join([self.essay_id, self.essay_set, str(self.score), feature_str, str(self.bag_of_words),str(len(self.uniq)),str(float(self.sz)/float(len(self.uniq)))]) + '\n'
+        # return ','.join([self.essay_id, self.essay_set,str(self.score),str(float(self.sz)/float(len(self.uniq)))]) + '\n'
     def get_label(self):
+        # string = "id,set,human_score"
         string = "id,set,human_score,sentence_count,word_count,avg_word_length,misspell_words,char_4,char_6,char_8,char_10,char_12,"
         string += "mean_char,std_char,word_10,word_18,word_25,mean_word,std_word,"
-        for i in xrange(1,36):
+        for i in xrange(1,len(pos_classes)+1):
             string += "pos_" + str(i) + ","
-        string += "beauty_score,vocabulory_score,maturity_score,bag_of_words_score\n"
+        string += "beauty_score,vocabulory_score,maturity_score,bag_of_words_score,uniq_score,TTR\n"
         return string
 
     def numerical_features(self):
@@ -132,8 +140,11 @@ class Point:
         self.features.append(self.beauty_score)
         self.maturity_score = 0
         vocab = 0
+        # sz=0
         for word in words:
             lower_word = word.lower()
+            self.uniq.add(lower_word)
+            self.sz+=1
             if lower_word in words_acq_age and len(lower_word) > 3:
                 self.maturity_score = self.maturity_score + float(words_acq_age[lower_word])
                 vocab += 1
@@ -192,12 +203,14 @@ def get_stem_tokens(tokens, stemmer):
 def stem_tokenize(essay):
     return get_stem_tokens(nltk.word_tokenize(essay), stemmer)
 
-def Bag_of_Words(essay_tokens, all_words):
+def Bag_of_Words(essay_tokens, all_words,essay_set):
     count = Counter(all_words)
     common_words = [x[0] for x in count.most_common(10)]
     essays  = [" ".join([str(word) for word in e if word in common_words]) for e in essay_tokens]
     tfidf = TfidfVectorizer(tokenizer=stem_tokenize, stop_words='english')
     tfs = tfidf.fit_transform(essays)
+    with open('dumped_tfidf_'+str(essay_set)+'.pkl', 'wb') as fid:
+        cPickle.dump(tfidf, fid)
     feature_names = tfidf.get_feature_names()
     v = []
     for i in xrange(len(essay_tokens)):
@@ -236,7 +249,7 @@ def make_points():
                 essay_tokens.append(tokens)
                 all_words.extend(tokens)
                 points.append(p)
-            values = Bag_of_Words(essay_tokens, all_words)
+            values = Bag_of_Words(essay_tokens, all_words,index)
             for i in xrange(len(points)):
                 points[i].set_bag_of_words(values[i])
             out_file = open('../features/features_' + str(index) + '.csv','w')

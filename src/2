@@ -1,0 +1,11 @@
+ linear_regression :
+['0.830582589767']
+ logistic_regression :
+['0.802646149513']
+ support_vector_regression :
+['0.825791156765']
+ support_vector_machine :
+['0.780650807575']
+generate_feature
+2
+generate_feature_done

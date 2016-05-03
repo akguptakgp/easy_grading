@@ -1,0 +1,10 @@
+# to generate the featuers run
+./gen_feature.sh
+
+# to run the classifier 
+./train.sh
+
+data folder contains training data files
+feature folder contains features generated
+experiment folder contains single features files
+increment folder contains features file when we added features in their order of their importance 
